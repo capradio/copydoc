@@ -46,23 +46,28 @@ class CopyDoc:
 
         soup = parser.soup
     """
-    def __init__(self, html_string, tokens=[]):
+    def __init__(self, html_string, tokens=[],multiline_tokens=[]):
         """
         Constructor takes an HTML string and sets up object.
         """
         self.soup = BeautifulSoup(html_string, 'html.parser')
         self.tags_blacklist = []
         self.tokens = tokens
+        self.multiline_tokens = multiline_tokens
+        self.text = ''
+        self.text_tags = []
+        self.text_list = []
         self.parse()
 
     def parse(self):
         """
         Run all parsing functions.
         """
+
         for tag in self.soup.findAll('span'):
             self.create_italic(tag)
             self.create_strong(tag)
-            self.create_underline(tag)
+            # self.create_underline(tag)
             self.unwrap_span(tag)
 
         for tag in self.soup.findAll('a'):
@@ -77,6 +82,10 @@ class CopyDoc:
                 self.find_token(tag, token, target)
 
             self.remove_blacklisted_tags(tag)
+
+        for tag in self.soup.findAll('p'):
+            for token, attr, end in self.multiline_tokens:
+                self.find_multiline_token(tag,token,attr,end)
 
     def remove_comments(self, tag):
         """
@@ -155,18 +164,59 @@ class CopyDoc:
         """
         Remove non-self-closing tags with no children *and* no content.
         """
+        
         has_children = len(tag.contents)
         has_text = len(list(tag.stripped_strings))
+
         if not has_children and not has_text and not tag.is_empty_element:
-            tag.extract()
+            extracted_tag = tag.extract()
 
     def find_token(self, tag, token, attr):
         try:
-            if not hasattr(self, attr) or not getattr(self, attr):
+            if not hasattr(self, attr): #or not getattr(self, attr):
                 text = tag.text
                 if text.startswith(token):
                     setattr(self, attr, text.split(':', 1)[-1].strip())
-                    tag.extract()
+                    # print "parsing tag %s" % tag
+                    # print "token | %s" % token
+                    # print "text | %s" % text
+                    # print "processed | %s" % text.split(':', 1)[-1].strip()
+                    # print "has attr %s | %s" % (attr, hasattr(self, attr))
+                    # print "get attr %s | %s" % (attr, getattr(self, attr))
+                    # tag.extract()
+                   
+        except TypeError:
+            pass
+
+    def find_multiline_token(self, tag, token, attr, end):
+        
+        try:
+            if not hasattr(self, attr) or not getattr(self, attr):
+                text = tag.text
+                token = token.decode('utf-8')
+
+                if text.startswith(token):
+                    t = tag.text.split(':',1)
+                    if len(t) == 1:
+                        multiline_text = unicode(t[0]).replace(token,'')
+                    else:
+                        multiline_text = unicode(t[1]).replace(token,'')
+                    multiline_text_tags = []
+                    sibs = tag.next_siblings
+                    
+                    for sib in sibs:
+                        
+                        if sib.text.startswith(end):
+                            break
+                        else:
+                            multiline_text += unicode(sib)
+                            multiline_text_tags.append(sib)
+
+
+                    multiline_text = multiline_text.replace('<p></p>','').replace('(build in relevant links, subheadings):','').replace('(build in relevant links, subheadings)','')
+                    setattr(self, attr, multiline_text.strip())
+                    setattr(self, '%s_tags' % attr, multiline_text_tags)
+
         except TypeError:
             pass
 
