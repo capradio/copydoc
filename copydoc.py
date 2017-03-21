@@ -193,7 +193,10 @@ class CopyDoc:
         try:
             if not hasattr(self, attr) or not getattr(self, attr):
                 text = tag.text
-                token = token.decode('utf-8')
+                try:
+                    token = token.decode('utf-8')
+                except AttributeError as e:
+                    pass
 
                 if text.startswith(token):
                     t = tag.text.split(':',1)
