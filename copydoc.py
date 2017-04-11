@@ -176,13 +176,18 @@ class CopyDoc:
             if not hasattr(self, attr): #or not getattr(self, attr):
                 text = tag.text
                 if text.startswith(token):
-                    setattr(self, attr, text.split(':', 1)[-1].strip())
-                    # print "parsing tag %s" % tag
-                    # print "token | %s" % token
-                    # print "text | %s" % text
-                    # print "processed | %s" % text.split(':', 1)[-1].strip()
-                    # print "has attr %s | %s" % (attr, hasattr(self, attr))
-                    # print "get attr %s | %s" % (attr, getattr(self, attr))
+                    # Checks if token is present but empty. If so, takes text value from next sibling.
+                    if ''==text.split(':', 1)[-1].strip():
+                        text = tag.nextSibling.text
+                        setattr(self, attr, text.split(':', 1)[-1].strip())
+                    else:
+                        setattr(self, attr, text.split(':', 1)[-1].strip())
+                    # print("parsing tag %s" % tag)
+                    # print("token | %s" % token)
+                    # print("text | %s" % text)
+                    # print("processed | %s" % (''==text.split(':', 1)[-1].strip()))
+                    # print("has attr %s | %s" % (attr, hasattr(self, attr)))
+                    # print("get attr %s | %s" % (attr, getattr(self, attr)))
                     # tag.extract()
                    
         except TypeError:
